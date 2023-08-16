@@ -1,100 +1,30 @@
-Grocery store
-Dollar store
-Convenience store
-Metaphysical supply store
-Liquor store
-Wine store
-Gift shop
-Sporting goods store
-Store
-Chocolate shop
-Irish goods store
-Herbal medicine store
-Shipping and mailing service
-Mexican grocery store
-Tobacco shop
-Bagel shop
-Coffee shop
-Bakery
-Cigar shop
-Skateboard shop
-Office supply store
-Sportswear store
-Running store
-Party store
-Hardware store
-Pharmacy
-Gift basket store
-Italian grocery store
-Game store
-Outdoor sports store
-Ice cream shop
-Variety store
-Billiards supply store
-Discount store
-Shopping mall
-Video game store
-Cafe
+Convenience
+Gas Station
+Coffee
+Mini Mart
+Bagel
+Grocery
+Liquor
 Supermarket
-Hypermarket
-Candy store
-Souvenir store
-Vaporizer store
-Coffee store
-Deli
-Drug store
-Donut shop
-General store
-Beer store
-Cheese shop
-Coffee roasters
-Wedding bakery
-Cake shop
+Cafe
+Bakery
 Bar
-Print shop
-Asian grocery store
-Vitamin & supplements store
-Produce market
-Restaurant
-Smoke shop
-Health and beauty shop
-Medical supply store
-Racing car parts store
-Gourmet grocery store
-Kosher grocery store
-Soccer store
-Massage supply store
-Dance store
-Cannabis store
-Exercise equipment store
-Fish store
-Pretzel store
-Bar & grill
-Bowling alley
-Health food store
-Confectionery
-Warehouse club
-Gas station
-Italian restaurant
-Cookie shop
-Farm shop
-Skate shop
-Sandwich shop
-Hobby store
-Dessert shop
-Homeopathic pharmacy
-Stationery store
-Pizza restaurant
-American restaurant
-Fast food restaurant
-Nut store
-Breakfast restaurant
-Fitness center
+Bowling
+Club
+Deli
+Donut
+Gift
+Golf
 Gym
+Health
+Ice Cream
 Juice
-Health Food
-Bubble Tea
-Country club
+Pharmacy
+Pizza
+Restaurant
+Smoke
 Spa
-Massage therapist
-Beauty Salon
+Sporting
+Sports Shop
+Studio
+Tea

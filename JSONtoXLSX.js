@@ -7,11 +7,12 @@ const info = clc.cyan.bold;
 const success = clc.green.bold;
 
 // Specify the folder paths
-const jsonFolderPath = './';
+const jsonFolderPath = './json/';
 const excelFolderPath = './Excel';
 
 // Get the current date for the subfolder
-const dateFolderName = './';
+const currentDate = new Date();
+const dateFolderName = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
 const excelSubFolderPath = path.join(excelFolderPath, dateFolderName);
 
 // Create the Excel subfolder if it doesn't exist
@@ -24,7 +25,7 @@ fs.readdir(jsonFolderPath, (err, files) => {
     return;
   }
 
-  const workbook = XLSX.utils.book_new();
+  const combinedWorkbook = XLSX.utils.book_new();
   const combinedData = {};
 
   files.forEach((file) => {
@@ -36,6 +37,16 @@ fs.readdir(jsonFolderPath, (err, files) => {
       const jsonFilePath = path.join(jsonFolderPath, file);
       const jsonContent = fs.readFileSync(jsonFilePath, 'utf8');
       const jsonData = JSON.parse(jsonContent);
+
+      // Create a separate workbook for each JSON file
+      const jsonWorkbook = XLSX.utils.book_new();
+      const jsonWorksheet = XLSX.utils.json_to_sheet(jsonData);
+      XLSX.utils.book_append_sheet(jsonWorkbook, jsonWorksheet, 'Sheet1');
+
+      // Save the JSON data to an individual Excel file
+      const jsonFileName = `${path.parse(file).name}.xlsx`;
+      const excelFilePath = path.join(excelSubFolderPath, jsonFileName);
+      XLSX.writeFile(jsonWorkbook, excelFilePath);
 
       jsonData.forEach((entry) => {
         const { name, address } = entry;
@@ -53,15 +64,15 @@ fs.readdir(jsonFolderPath, (err, files) => {
   const combinedArray = Object.values(combinedData);
 
   // Convert combined JSON data to a worksheet
-  const worksheet = XLSX.utils.json_to_sheet(combinedArray);
+  const combinedWorksheet = XLSX.utils.json_to_sheet(combinedArray);
 
-  // Add the worksheet to the existing workbook
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Combined Data');
+  // Add the worksheet to the combined workbook
+  XLSX.utils.book_append_sheet(combinedWorkbook, combinedWorksheet, 'Combined Data');
 
-  // Save the XLSX file with all the data in a single sheet
-  const xlsxFileName = 'combined_data.xlsx';
-  const xlsxFilePath = path.join(excelSubFolderPath, xlsxFileName);
-  XLSX.writeFile(workbook, xlsxFilePath);
+  // Save the combined XLSX file
+  const combinedFileName = 'combined_data.xlsx';
+  const combinedFilePath = path.join(excelSubFolderPath, combinedFileName);
+  XLSX.writeFile(combinedWorkbook, combinedFilePath);
 
-  console.log(success(`(✓) Saved combined data to ${xlsxFileName}\n______________________________________________________\n`));
+  console.log(success(`(✓) Saved combined data to ${combinedFileName}\n______________________________________________________\n`));
 });
