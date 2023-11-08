@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "@turf/turf": "^6.5.0",
+    "cli-color": "^2.0.3",
+    "playwright": "^1.37.1",
+    "xlsx": "^0.18.5"
+  },
+  "name": "-03--Puppeteer-Maps-Crawler",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/TechLionDev/-03--Puppeteer-Maps-Crawler",
+  "license": "MIT",
+  "scripts": {
+    "start": "clear && node test.js && node JSONtoXLSX.js"
+  }
+}

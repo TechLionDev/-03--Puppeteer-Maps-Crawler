@@ -1,2 +1,3 @@
-*.json
+json/*
+Excel/*
 node_modules/

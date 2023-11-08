@@ -5,16 +5,15 @@ async function main() {
 
     let sum = 0;
 
-    let categories = fs.readFileSync('./categories.txt', 'utf8').split('\r\n');
-    let zipcodes = fs.readFileSync('./zipcodes.txt', 'utf8').split('\r\n');
+    let categories = fs.readFileSync('./categories.txt', 'utf8').split('\n');
+    let zipcodes = fs.readFileSync('./zipcodes.txt', 'utf8').split('\n');
 
-
-    for (let i = 0; i < categories.length; i++) {
-        const category = categories[i];
-       for (let j = 0; j < zipcodes.length; j++) {
-        const zipcode = zipcodes[j];
+    for (let i = 0; i < zipcodes.length; i++) {
+        const zipcode = zipcodes[i];
+       for (let j = 0; j < categories.length; j++) {
+        const category = categories[j];
         console.log(`${category} ${zipcode}`);
-         let results = await crawl(category + ' ' + zipcode);
+        let results = await crawl(category + ' ' + zipcode);
         console.log("--------------------------------");
         console.log(`Found ${results.length} for '${category} ${zipcode}'`);
         console.log("--------------------------------");

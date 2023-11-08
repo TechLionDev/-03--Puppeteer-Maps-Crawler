@@ -46,8 +46,8 @@ async function crawl(SEARCH_TERM) {
 
             console.log(info(`Crawling for coordinates: ${latitude}, ${longitude}, Zoom: ${zoom}`));
 
-            const rows = 3; // Number of rows
-            const columns = 3; // Number of columns
+            const rows = 2; // Number of rows
+            const columns = 2; // Number of columns
             const totalArea = 0.2 * 0.2; // Total area
 
             const chunkSize = Math.sqrt(totalArea / (rows * columns));
@@ -137,8 +137,9 @@ async function crawl(SEARCH_TERM) {
         const outputFileName = `./json/${SEARCH_TERM.replace(' ', '_')}.json`;
         fs.writeFileSync(outputFileName, JSON.stringify(dataArray, null, 2));
         console.log(success('Data written to', outputFileName));
-        process.exit(0); // Quit the process
     }
+
+    return dataArray;
 }
 
 module.exports = crawl;
