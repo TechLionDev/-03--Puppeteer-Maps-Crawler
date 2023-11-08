@@ -19,7 +19,7 @@ async function extractCoordinatesAndZoom(url) {
 }
 
 async function crawl(SEARCH_TERM) {
-    const browser = await chromium.launch({ headless: false });
+    const browser = await chromium.launch({ headless: true }); // make false to see the browser
     const dataArray = [];
 
     try {
