@@ -6,114 +6,139 @@ const success = message => clc.green.bold('(✓) ' + message);
 const { chromium } = require('playwright');
 const fs = require('fs');
 
+async function extractCoordinatesAndZoom(url) {
+    const regex = /@([-+]?\d*\.\d+),([-+]?\d*\.\d+),(\d+)z/i;
+    const match = url.match(regex);
+    if (match) {
+        const latitude = parseFloat(match[1]);
+        const longitude = parseFloat(match[2]);
+        const zoom = 15; // Always use maximum zoom (15)
+        return { latitude, longitude, zoom };
+    }
+    return { latitude: null, longitude: null, zoom: null };
+}
+
 async function crawl(SEARCH_TERM) {
     const browser = await chromium.launch({ headless: false });
-    const context = await browser.newContext();
-    const page = await context.newPage();
     const dataArray = [];
+
     try {
+        const context = await browser.newContext();
+        const page = await context.newPage();
+
         console.log(info('Opening Google Maps...'));
-        await page.goto('https://www.google.com/maps/search/' + encodeURIComponent(SEARCH_TERM));
+        const initialUrl = 'https://www.google.com/maps/search/' + encodeURIComponent(SEARCH_TERM);
+        await page.goto(initialUrl);
 
-        const feedSelector = 'div[role="feed"]';
-        const endOfListText = "You've reached the end of the list.";
+        let isCompleted = false;
 
-        let previousHeight = 0;
-        let currentHeight = await page.$eval(feedSelector, element => element.scrollHeight);
+        while (!isCompleted) {
+            await page.waitForTimeout(10 * 1000);
 
+            const currentUrl = await page.url();
 
+            const { latitude, longitude, zoom } = await extractCoordinatesAndZoom(currentUrl);
 
-        while (previousHeight !== currentHeight) {
-            try {
-                previousHeight = currentHeight;
+            if (!latitude || !longitude || !zoom) {
+                console.error(error('Invalid URL format. Unable to extract coordinates and zoom level.'));
+                break;
+            }
 
-                console.log(info('Scrolling to the bottom...'));
-                await page.$eval(feedSelector, element => element.scrollTop = element.scrollHeight);
+            console.log(info(`Crawling for coordinates: ${latitude}, ${longitude}, Zoom: ${zoom}`));
 
-                await page.waitForTimeout(2000); // Adjust the wait time as needed
+            const rows = 3; // Number of rows
+            const columns = 3; // Number of columns
+            const totalArea = 0.2 * 0.2; // Total area
 
-                const isEndOfList = await page.$eval(feedSelector, (element, text) => element.innerText.includes(text), endOfListText);
+            const chunkSize = Math.sqrt(totalArea / (rows * columns));
 
-                if (isEndOfList) {
-                    console.log(success('Reached the end of the list.'));
-                    break;
+            const latChunks = Math.ceil(0.2 / chunkSize);
+            const longChunks = Math.ceil(0.2 / chunkSize);
+
+            for (let latChunk = 0; latChunk < latChunks; latChunk++) {
+                for (let longChunk = 0; longChunk < longChunks; longChunk++) {
+                    const chunkLatitude = latitude + latChunk * chunkSize;
+                    const chunkLongitude = longitude + longChunk * chunkSize;
+                    const totalChunks = latChunks * longChunks;
+                    const currentChunk = latChunk * longChunks + longChunk + 1;
+
+                    console.log(info(`Crawling chunk ${currentChunk}/${totalChunks}: Latitude: ${chunkLatitude}, Longitude: ${chunkLongitude}, Zoom: ${zoom}`));
+
+                    const chunkUrl = `https://www.google.com/maps/search/${encodeURIComponent(SEARCH_TERM)}/@${chunkLatitude},${chunkLongitude},${zoom}z`;
+                    await page.goto(chunkUrl);
+
+                    console.log(info('Scrolling to the bottom...'));
+                    await page.evaluate(() => {
+                        const feed = document.querySelector('div[role="feed"]');
+                        feed.scrollTop = feed.scrollHeight;
+                    });
+
+                    await page.waitForTimeout(2000);
+
+                    const elementsToClick = await page.$$('.hfpxzc');
+                    for (let i = 0; i < elementsToClick.length; i++) {
+                        const element = elementsToClick[i];
+                        const isElementAttached = await element.evaluate(element => !!element);
+
+                        if (!isElementAttached) {
+                            console.log(info('Element is not attached, skipping...'));
+                            continue;
+                        }
+
+                        await element.click();
+                        await page.waitForSelector('div[role="main"]', { timeout: 5000 });
+
+                        const extractedData = await page.evaluate(() => {
+                            const nameElement = document.querySelector('div[role="main"] h1.DUwDvf');
+                            const categoryElement = document.querySelector('div[role="main"] button.DkEaL');
+                            const addressElement = document.querySelector('button[data-item-id="address"] .Io6YTe');
+                            const phoneElement = document.querySelector('div[role="main"] button[data-item-id="phone"] .Io6YTe');
+
+                            return {
+                                name: nameElement ? nameElement.textContent : null,
+                                category: categoryElement ? categoryElement.textContent : null,
+                                address: addressElement ? addressElement.textContent : null,
+                                phone: phoneElement ? phoneElement.textContent : null,
+                                zipCode: null,
+                            };
+                        });
+
+                        if (extractedData.name && extractedData.address) {
+                            const zipCodeMatch = extractedData.address.match(/\b\d{5}(?:-\d{4})?\b/);
+                            extractedData.zipCode = zipCodeMatch ? zipCodeMatch[0] : "No Zip Code Found";
+                            console.log(success('Extracted Data:'), extractedData);
+                            dataArray.push(extractedData);
+                        } else {
+                            console.log(info('Not Saving:'), extractedData);
+                        }
+
+                        await page.waitForTimeout(1500);
+                    }
+
+                    console.log(info('Scrolling back to the top...'));
+                    await page.evaluate(() => {
+                        const feed = document.querySelector('div[role="feed"]');
+                        feed.scrollTop = 0;
+                    });
+
+                    console.log(info('Waiting for a moment...'));
+                    await page.waitForTimeout(2000);
                 }
-
-                currentHeight = await page.$eval(feedSelector, element => element.scrollHeight);
-
-                console.log(info('Continuing to scroll...'));
-            } catch (scrollError) {
-                console.error(error('Error while scrolling:'), scrollError);
+                isCompleted = true;
             }
         }
-
-        console.log(info('Scrolling back to the top...'));
-        await page.$eval(feedSelector, element => element.scrollTop = 0);
-
-        console.log(info('Waiting for a moment...'));
-        await page.waitForTimeout(2000); // Adjust the wait time as needed
-
-        console.log(info('Clicking on each element with class "hfpxzc"...'));
-        const elementsToClick = await page.$$('.hfpxzc');
-        for (let i = 0; i < elementsToClick.length; i++) {
-            try {
-                const element = elementsToClick[i];
-                const isElementAttached = await element.evaluate(element => !!element);
-
-                if (!isElementAttached) {
-                    console.log(info('Element is not attached, skipping...'));
-                    continue;
-                }
-
-                await element.click();
-                await page.waitForSelector('div[role="main"]', { timeout: 5000 }); // Wait for the div with role "main" to appear
-
-                // Extract data from the specified selectors
-                const extractedData = await page.evaluate(() => {
-                    const nameElement = document.querySelector('div[role="main"] h1.DUwDvf');
-                    const categoryElement = document.querySelector('div[role="main"] button.DkEaL');
-                    const addressElement = document.querySelector('button[data-item-id="address"] .Io6YTe');
-                    const phoneElement = document.querySelector('div[role="main"] button[data-item-id="phone"] .Io6YTe');
-
-                    return {
-                        name: nameElement ? nameElement.textContent : null,
-                        category: categoryElement ? categoryElement.textContent : null,
-                        address: addressElement ? addressElement.textContent : null,
-                        phone: phoneElement ? phoneElement.textContent : null,
-                        zipCode: null, // Placeholder for zip code
-                    };
-                });
-                if (extractedData.name && extractedData.address) {
-                    // Extract zip code from the address and save it as a separate property
-                    const zipCodeMatch = extractedData.address.match(/\b\d{5}(?:-\d{4})?\b/);
-                    extractedData.zipCode = zipCodeMatch ? zipCodeMatch[0] : "No Zip Code Found";
-                    console.log(success('Extracted Data:'), extractedData);
-                    // Add each extracted object to the dataArray
-                    dataArray.push(extractedData);
-
-                    fs.writeFileSync('./json/' + SEARCH_TERM + '.json', JSON.stringify(dataArray, null, 2));
-                } else {
-                    console.log(info('Not Saving:'), extractedData);
-                }
-
-                await page.waitForTimeout(1.5 * 1000); // Pause for 1 second before proceeding to the next click
-            } catch (clickError) {
-                console.error(error('Error while clicking and extracting data:'), clickError);
-            }
-        }
-
-        // Write the array of JSON objects to the "data.json" file
-        fs.writeFileSync('./json/' + SEARCH_TERM + '.json', JSON.stringify(dataArray, null, 2));
-
-        console.log(success(`Data saved to "${SEARCH_TERM}.json"`));
     } catch (crawlError) {
         console.error(error('Error during crawl:'), crawlError);
     } finally {
         console.log(info('Closing the browser...'));
         await browser.close();
-    }
 
-    return dataArray;
+        // Write the JSON file and quit
+        const outputFileName = `./json/${SEARCH_TERM.replace(' ', '_')}.json`;
+        fs.writeFileSync(outputFileName, JSON.stringify(dataArray, null, 2));
+        console.log(success('Data written to', outputFileName));
+        process.exit(0); // Quit the process
+    }
 }
 
 module.exports = crawl;

@@ -6,73 +6,78 @@ const error = clc.red.bold;
 const info = clc.cyan.bold;
 const success = clc.green.bold;
 
-// Specify the folder paths
 const jsonFolderPath = './json/';
 const excelFolderPath = './Excel';
 
-// Get the current date for the subfolder
 const currentDate = new Date();
-const dateFolderName = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+const dateFolderName = currentDate.toISOString().split('T')[0];
 const excelSubFolderPath = path.join(excelFolderPath, dateFolderName);
-
-// Create the Excel subfolder if it doesn't exist
 fs.mkdirSync(excelSubFolderPath, { recursive: true });
 
-// Read JSON files in the subfolder corresponding to the current date
+const combinedData = {};
+
+function processJSONFile(file) {
+  if (file.includes('package') || !file.endsWith('.json')) {
+    return;
+  }
+
+  console.log(info(`(i) Reading ${file}...`));
+
+  const jsonFilePath = path.join(jsonFolderPath, file);
+  const jsonContent = fs.readFileSync(jsonFilePath, 'utf8');
+  const jsonData = JSON.parse(jsonContent);
+
+  const zipCode = file;
+  const zipCodeFolderPath = path.join(excelSubFolderPath, zipCode);
+  fs.mkdirSync(zipCodeFolderPath, { recursive: true });
+
+  jsonData.forEach((entry) => {
+    const jsonWorkbook = XLSX.utils.book_new();
+    const jsonWorksheet = XLSX.utils.json_to_sheet([entry]);
+    XLSX.utils.book_append_sheet(jsonWorkbook, jsonWorksheet, 'Sheet1');
+
+    const jsonFileName = `${path.parse(file).name}.xlsx`;
+    const excelFilePath = path.join(zipCodeFolderPath, jsonFileName);
+    XLSX.writeFile(jsonWorkbook, excelFilePath);
+
+    if (!combinedData[zipCode]) {
+      combinedData[zipCode] = [];
+    }
+    combinedData[zipCode].push(entry);
+  });
+
+  console.log(success(`(✓) Processed ${file}`));
+}
+
 fs.readdir(jsonFolderPath, (err, files) => {
   if (err) {
     console.log(error('(⬣) Error reading folder:', err));
     return;
   }
 
-  const combinedWorkbook = XLSX.utils.book_new();
-  const combinedData = {};
+  files.forEach(processJSONFile);
+  
+  const masterCombinedData = Object.values(combinedData).flat();
 
-  files.forEach((file) => {
-    if (file.includes('package')) {
-      return;
-    }
-    if (file.endsWith('.json')) {
-      console.log(info(`(i) Reading ${file}...\n`));
-      const jsonFilePath = path.join(jsonFolderPath, file);
-      const jsonContent = fs.readFileSync(jsonFilePath, 'utf8');
-      const jsonData = JSON.parse(jsonContent);
+  for (const zipCode in combinedData) {
+    const combinedWorkbook = XLSX.utils.book_new();
+    const combinedWorksheet = XLSX.utils.json_to_sheet(combinedData[zipCode]);
+    XLSX.utils.book_append_sheet(combinedWorkbook, combinedWorksheet, 'Combined Data');
 
-      // Create a separate workbook for each JSON file
-      const jsonWorkbook = XLSX.utils.book_new();
-      const jsonWorksheet = XLSX.utils.json_to_sheet(jsonData);
-      XLSX.utils.book_append_sheet(jsonWorkbook, jsonWorksheet, 'Sheet1');
+    const combinedFileName = `combined_data_${zipCode}.xlsx`;
+    const combinedFilePath = path.join(excelSubFolderPath, zipCode, combinedFileName);
+    XLSX.writeFile(combinedWorkbook, combinedFilePath);
 
-      // Save the JSON data to an individual Excel file
-      const jsonFileName = `${path.parse(file).name}.xlsx`;
-      const excelFilePath = path.join(excelSubFolderPath, jsonFileName);
-      XLSX.writeFile(jsonWorkbook, excelFilePath);
+    console.log(success(`(✓) Saved combined data for ${zipCode} to ${combinedFileName}`));
+  }
 
-      jsonData.forEach((entry) => {
-        const { name, address } = entry;
-        const key = `${name}-${address}`;
-        if (!combinedData[key]) {
-          combinedData[key] = entry;
-        }
-      });
+  const masterCombinedWorkbook = XLSX.utils.book_new();
+  const masterCombinedWorksheet = XLSX.utils.json_to_sheet(masterCombinedData);
+  XLSX.utils.book_append_sheet(masterCombinedWorkbook, masterCombinedWorksheet, 'Master Combined Data');
 
-      console.log(success(`(✓) Processed ${file}\n______________________________________________________\n`));
-    }
-  });
+  const masterCombinedFileName = `master_combined_data.xlsx`;
+  const masterCombinedFilePath = path.join(excelSubFolderPath, masterCombinedFileName);
+  XLSX.writeFile(masterCombinedWorkbook, masterCombinedFilePath);
 
-  // Convert combined data to an array of objects
-  const combinedArray = Object.values(combinedData);
-
-  // Convert combined JSON data to a worksheet
-  const combinedWorksheet = XLSX.utils.json_to_sheet(combinedArray);
-
-  // Add the worksheet to the combined workbook
-  XLSX.utils.book_append_sheet(combinedWorkbook, combinedWorksheet, 'Combined Data');
-
-  // Save the combined XLSX file
-  const combinedFileName = 'combined_data.xlsx';
-  const combinedFilePath = path.join(excelSubFolderPath, combinedFileName);
-  XLSX.writeFile(combinedWorkbook, combinedFilePath);
-
-  console.log(success(`(✓) Saved combined data to ${combinedFileName}\n______________________________________________________\n`));
+  console.log(success(`(✓) Saved master combined data to ${masterCombinedFileName}`));
 });
